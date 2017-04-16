@@ -4,6 +4,7 @@ from Group import Group
 from Config import Config
 from collections import defaultdict
 import numpy as np
+import pandas as ps
 
 #global class.
 class GroupRec:
@@ -14,8 +15,8 @@ class GroupRec:
         #maybe Numpy arrays.? think about it. code so that it can be changed midway
         #without affecting much.
         #many row and column operations have simple APIs in Numpy
-        self.M_train = np.array()
-        self.M_test = np.array()
+        self.M_train = np.array([10, 10])
+        self.M_test = np.array([10, 10])
         
         #output after self.sgd_factorize()
         self.item_factors = []
@@ -26,13 +27,25 @@ class GroupRec:
         pass
 
     #add list of groups to grouprec
-    def add_groups(self):
+    def add_groups(self, groups):
+        self.groups = groups
         pass
     
     #read training and testing data into matrices
     def read_data(self):
-        pass
-    
+        column_headers = ['user_id', 'item_id', 'rating', 'timestamp']
+        training_data = ps.read_csv(self.cfg.training_file, sep = '\t', names = column_headers)
+        testing_data = ps.read_csv(self.cfg.testing_file, sep = '\t', names = column_headers)
+        
+        num_users = max(training_data.user_id.unique())
+        num_items = max(training_data.item_id.unique())
+        
+        self.M_train = np.zeros((num_users, num_items))
+        
+        for row in training_data.itertuples(index = False):
+            self.M_train[row.user_id - 1, row.item_id - 1] = row.rating 
+        print self.M_train
+        
     #split data set file into training and test file by ratio 
     def split_data(self, data_file, training_ratio = 0.7):
         pass
@@ -57,23 +70,21 @@ class GroupRec:
         
         #calculate factors
         #aggregate the factors
-        for group in groups:
-            pass
         pass
     
-    def bf_runner(self, groups = None):
+    def bf_runner(self, groups = None, aggregator = Aggregators.average):
         #aggregate user ratings into virtual group
         #calculate factors of group
         pass
         
-    def wbf_runner(self, groups = None):
+    def wbf_runner(self, groups = None, aggregator = Aggregators.average):
         pass
     
     # can have this step being done in af_runner/ bf_runner itself
     def evaluation(self):
         pass
 
-def __main__():
+if __name__ == "__main__":
     #Workflow
     gr = GroupRec()
     #can, move this function also to config __init__, will decide later

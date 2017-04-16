@@ -41,11 +41,12 @@ class Group():
     # For eg.
     # if (can_group(members): Group(members)
     @staticmethod
-    def can_group(self, members):
+    def can_group(members):
         return True
     
     #programmatically generate groups of given size
-    def generate_groups(self, count, size):
+    @staticmethod
+    def generate_groups(count, size):
         pass
     
     #iterate over the rating matrix and find candidate items for this group

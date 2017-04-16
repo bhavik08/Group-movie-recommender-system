@@ -10,30 +10,30 @@ class Config:
         configParser.read(config_file_path)
         
         #movie lens 100k dataset, 80 - 20 train/test ratio, present in data directory
-        self.training_file = float(configParser.get('Config', 'rating_threshold_af'))
-        self.testing_file = float(configParser.get('Config', 'rating_threshold_af'))
+        self.training_file = configParser.get('Config', 'training_file')
+        self.testing_file = configParser.get('Config', 'testing_file')
         
-        self.small_grp_size = float(configParser.get('Config', 'rating_threshold_af'))
-        self.medium_grp_size = float(configParser.get('Config', 'rating_threshold_af'))
-        self.large_grp_size = float(configParser.get('Config', 'rating_threshold_af'))
+        self.small_grp_size = float(configParser.get('Config', 'small_grp_size'))
+        self.medium_grp_size = float(configParser.get('Config', 'medium_grp_size'))
+        self.large_grp_size = float(configParser.get('Config', 'large_grp_size'))
         
-        self.max_iterations_mf = float(configParser.get('Config', 'rating_threshold_af'))
-        self.lambda_mf = float(configParser.get('Config', 'rating_threshold_af'))
+        self.max_iterations_mf = float(configParser.get('Config', 'max_iterations_mf'))
+        self.lambda_mf = float(configParser.get('Config', 'lambda_mf'))
         
         #AF (after factorization)
         self.rating_threshold_af = float(configParser.get('Config', 'rating_threshold_af'))
-        self.num_factors_af = float(configParser.get('Config', 'rating_threshold_af'))
-        self.num_recos_af = float(configParser.get('Config', 'rating_threshold_af'))
+        self.num_factors_af = float(configParser.get('Config', 'num_factors_af'))
+        self.num_recos_af = float(configParser.get('Config', 'num_recos_af'))
         
         #BF (before factorization)
         self.rating_threshold_bf = float(configParser.get('Config', 'rating_threshold_bf'))
-        self.num_factors_bf = float(configParser.get('Config', 'rating_threshold_bf'))
-        self.num_recos_bf = float(configParser.get('Config', 'rating_threshold_af'))
+        self.num_factors_bf = float(configParser.get('Config', 'num_factors_bf'))
+        self.num_recos_bf = float(configParser.get('Config', 'num_recos_bf'))
         
         #WBF (weighted before factorization)
         self.rating_threshold_af = float(configParser.get('Config', 'rating_threshold_wbf'))
-        self.num_factors_wbf = float(configParser.get('Config', 'rating_threshold_wbf'))
-        self.num_recos_wbf = float(configParser.get('Config', 'rating_threshold_af'))
+        self.num_factors_wbf = float(configParser.get('Config', 'num_factors_wbf'))
+        self.num_recos_wbf = float(configParser.get('Config', 'num_recos_wbf'))
         
         
         
