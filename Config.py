@@ -13,27 +13,27 @@ class Config:
         self.training_file = configParser.get('Config', 'training_file')
         self.testing_file = configParser.get('Config', 'testing_file')
         
-        self.small_grp_size = float(configParser.get('Config', 'small_grp_size'))
-        self.medium_grp_size = float(configParser.get('Config', 'medium_grp_size'))
-        self.large_grp_size = float(configParser.get('Config', 'large_grp_size'))
+        self.small_grp_size = int(configParser.get('Config', 'small_grp_size'))
+        self.medium_grp_size = int(configParser.get('Config', 'medium_grp_size'))
+        self.large_grp_size = int(configParser.get('Config', 'large_grp_size'))
         
-        self.max_iterations_mf = float(configParser.get('Config', 'max_iterations_mf'))
+        self.max_iterations_mf = int(configParser.get('Config', 'max_iterations_mf'))
         self.lambda_mf = float(configParser.get('Config', 'lambda_mf'))
+        self.learning_rate_mf = float(configParser.get('Config', 'learning_rate_mf'))
+        
+        self.num_factors = int(configParser.get('Config', 'num_factors'))
         
         #AF (after factorization)
         self.rating_threshold_af = float(configParser.get('Config', 'rating_threshold_af'))
-        self.num_factors_af = float(configParser.get('Config', 'num_factors_af'))
-        self.num_recos_af = float(configParser.get('Config', 'num_recos_af'))
+        self.num_recos_af = int(configParser.get('Config', 'num_recos_af'))
         
         #BF (before factorization)
         self.rating_threshold_bf = float(configParser.get('Config', 'rating_threshold_bf'))
-        self.num_factors_bf = float(configParser.get('Config', 'num_factors_bf'))
-        self.num_recos_bf = float(configParser.get('Config', 'num_recos_bf'))
+        self.num_recos_bf = int(configParser.get('Config', 'num_recos_bf'))
         
         #WBF (weighted before factorization)
         self.rating_threshold_af = float(configParser.get('Config', 'rating_threshold_wbf'))
-        self.num_factors_wbf = float(configParser.get('Config', 'num_factors_wbf'))
-        self.num_recos_wbf = float(configParser.get('Config', 'num_recos_wbf'))
+        self.num_recos_wbf = int(configParser.get('Config', 'num_recos_wbf'))
         
         
         
