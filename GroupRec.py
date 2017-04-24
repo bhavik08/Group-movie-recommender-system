@@ -74,6 +74,18 @@ class GroupRec:
         prediction = self.ratings_global_mean + self.user_biases[user] + self.item_biases[item]
         prediction += self.user_factors[user, :].dot(self.item_factors[item, :].T)
         return prediction
+    
+    def predict_group_rating(self, group, item, method):
+        #bias_grp and
+        if (method == 'af'):
+            factors = self.grp_factors_af; bias_group = self.bias_af
+        elif (method == 'bf'):
+            factors = self.grp_factors_bf; bias_group = self.bias_bf
+        elif (method == 'wbf'):
+            factors = self.grp_factors_wbf; bias_group = self.bias_wbf
+        
+        return self.ratings_global_mean + bias_group + self.item_biases[item] \
+                                        + sum(np.dot(factors, self.item_factors))
         
     #matrix factorization code, this should be run before af, bf or wbf
     #outputs from this are used in methods
@@ -163,12 +175,19 @@ if __name__ == "__main__":
     #add groups or generate random groups of given size
     groups = []
     members = [1,2,3,4]
-    if (Group.can_group(members)):
-        Group(members, gr.cfg)
+    candidate_items = Group.find_candidate_items(gr.ratings, members)
+    if len(candidate_items) != 0:
+        Group(gr.cfg, members, candidate_items)
     
     #OR generate groups programmatically
-    groups = Group.generate_groups(10, gr.cfg.small_grp_size)
+    #disjoint means none of the groups shares any common members     
+    groups = Group.generate_groups(gr.cfg, gr.ratings, gr.num_users, 10, gr.cfg.small_grp_size, disjoint=True)
     gr.add_groups(groups)
+    
+    #generated groups
+    print 'generated groups: '
+    for group in groups:
+        print(group.members)
     
     #PS: could call them without passing groups as we have already added groups to grouprec object
     gr.af_runner(groups, Aggregators.average)

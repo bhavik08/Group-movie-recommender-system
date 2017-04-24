@@ -1,12 +1,13 @@
+import numpy as np
 
 class Group():
-    def __init__(self, config, members):
+    def __init__(self, config, members, candidate_items):
         #member ids
-        self.members = []
+        self.members = members
         
         #list of items that can be recommended. These should not have been
         #watched by any member of group
-        self.candidate_items = []
+        self.candidate_items = candidate_items
         
         #AF
         self.grp_factors_af = []
@@ -39,33 +40,32 @@ class Group():
     #watched by any member of the group. Only these can be recommended.
     #call this method before calling group constructor.
     # For eg.
-    # if (can_group(members): Group(members)
     @staticmethod
-    def can_group(members):
-        return True
+    def find_candidate_items(ratings, members):
+        if len(members) == 0: return []
+        
+        unwatched_items = np.argwhere(ratings[members[0]] == 0)
+        for member in members:
+            cur_unwatched = np.argwhere(ratings[member] == 0)
+            unwatched_items = np.intersect1d(unwatched_items, cur_unwatched)
+        
+        return unwatched_items
     
     #programmatically generate groups of given size
     @staticmethod
-    def generate_groups(count, size):
-        pass
-    
-    #iterate over the rating matrix and find candidate items for this group
-    def find_candidate_items(self):
-        pass
-    
-    #given bias
-    def predict_rating(self, mean, bias_item, method, item_factors):
-        #bias_grp and
-        if (method == 'af'):
-            factors = self.grp_factors_af; bias_group = self.bias_af
-        elif (method == 'bf'):
-            factors = self.grp_factors_bf; bias_group = self.bias_bf
-        elif (method == 'wbf'):
-            factors = self.grp_factors_wbf; bias_group = self.bias_wbf
+    def generate_groups(cfg, ratings, num_users, count, size, disjoint = True):
+        avbl_users = [i for i in range(num_users)]
+        groups = []
         
-        #unclear
-        return mean + bias_item + bias_group + sum([factors[i]*item_factors[i] for i in range(len(factors))])
-        pass
+        for iter in range(count):
+            group_members = np.random.choice(avbl_users, size = size, replace = False)
+            candidate_items = Group.find_candidate_items(ratings, group_members)
+            
+            if len(candidate_items) != 0:
+                groups += [Group(cfg, group_members, candidate_items)]
+                avbl_users = np.setdiff1d(avbl_users, group_members)
+                
+        return groups
     
     
     
