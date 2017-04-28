@@ -21,7 +21,7 @@ class GroupRec:
         self.test_ratings = np.ndarray((10,10))
         
         #read data into above matrices
-        self.read_data()
+        self.read_data(self.cfg.training_file)
         
         self.num_users = self.ratings.shape[0]
         self.num_items = self.ratings.shape[1]
@@ -51,19 +51,19 @@ class GroupRec:
         pass
     
     #read training and testing data into matrices
-    def read_data(self):
+    def read_data(self, file):
         column_headers = ['user_id', 'item_id', 'rating', 'timestamp']
-        print 'Reading training data from ', self.cfg.training_file, '...'
-        training_data = ps.read_csv(self.cfg.training_file, sep = '\t', names = column_headers)
-        print 'Reading testing data from ', self.cfg.testing_file, '...'
-        testing_data = ps.read_csv(self.cfg.testing_file, sep = '\t', names = column_headers)
+        print 'Reading data from ', file, '...'
+        data = ps.read_csv(file, sep = '\t', names = column_headers)
+        #print 'Reading testing data from ', self.cfg.testing_file, '...'
+        #testing_data = ps.read_csv(self.cfg.testing_file, sep = '\t', names = column_headers)
         
-        num_users = max(training_data.user_id.unique())
-        num_items = max(training_data.item_id.unique())
+        num_users = max(data.user_id.unique())
+        num_items = max(data.item_id.unique())
         
         self.ratings = np.zeros((num_users, num_items))
         
-        for row in training_data.itertuples(index = False):
+        for row in data.itertuples(index = False):
             self.ratings[row.user_id - 1, row.item_id - 1] = row.rating 
         
     #split data set file into training and test file by ratio 
@@ -159,10 +159,25 @@ class GroupRec:
         
     def wbf_runner(self, groups = None, aggregator = Aggregators.average):
         pass
-    
-    # can have this step being done in af_runner/ bf_runner itself
+
     def evaluation(self):
-        pass
+        self.read_data(self.cfg.testing_file)
+
+        # For AF
+        for grp in self.groups:
+            grp.generate_actual_recommendations(self.ratings, self.cfg.rating_threshold_af)
+            grp.evaluate_af()
+
+        # For BF
+        for grp in self.groups:
+            grp.generate_actual_recommendations(self.ratings, self.cfg.rating_threshold_bf)
+            grp.evaluate_bf()
+
+        # For WBF
+        for grp in self.groups:
+            grp.generate_actual_recommendations(self.ratings, self.cfg.rating_threshold_wbf)
+            grp.evaluate_wbf()
+
 
 if __name__ == "__main__":
     #Workflow
@@ -193,6 +208,8 @@ if __name__ == "__main__":
     gr.af_runner(groups, Aggregators.average)
     gr.bf_runner(groups, Aggregators.median)
     gr.wbf_runner(groups, Aggregators.least_misery)
-    
+
+    #evaluation
+    gr.evaluation()
     pass
 
