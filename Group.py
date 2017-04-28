@@ -9,6 +9,7 @@ class Group():
         #watched by any member of group
         self.candidate_items = candidate_items
         self.actual_recos = []
+        self.false_positive = []
         
         #AF
         self.grp_factors_af = []
@@ -70,23 +71,29 @@ class Group():
     
     def generate_actual_recommendations(self, ratings, threshold):
         items = np.argwhere(ratings[self.members[0]] >= threshold)
+        fp = np.argwhere(ratings[self.members[0]] > 0 and ratings[self.members[0]] < threshold)
         for member in self.members:
             cur_items = np.argwhere(ratings[member] >= threshold)
-            items = np.intersect1d(items, cur_items)
+            fp = np.union1d(fp, np.argwhere(ratings[member] > 0 and ratings[member] < threshold))
+            items = np.union1d(items, cur_items)
 
         self.actual_recos = items
+        self.false_positive = fp
 
     def evaluate_af(self):
         tp = float(np.intersect1d(self.actual_recos, self.reco_list_af).size)
-        self.precision_af = tp / len(self.reco_list_af)
+        fp = float(np.intersect1d(self.false_positive, self.reco_list_af).size)
+        self.precision_af = tp / (tp + fp)
         self.recall_af = tp / self.actual_recos.size
 
     def evaluate_bf(self):
         tp = float(np.intersect1d(self.actual_recos, self.reco_list_bf).size)
-        self.precision_bf = tp / len(self.reco_list_bf)
+        fp = float(np.intersect1d(self.false_positive, self.reco_list_bf).size)
+        self.precision_bf = tp / (tp + fp)
         self.recall_bf = tp / self.actual_recos.size
 
     def evaluate_wbf(self):
         tp = float(np.intersect1d(self.actual_recos, self.reco_list_wbf).size)
-        self.precision_wbf = tp / len(self.reco_list_wbf)
+        fp = float(np.intersect1d(self.false_positive, self.reco_list_wbf).size)
+        self.precision_wbf = tp / (tp + fp)
         self.recall_wbf = tp / self.actual_recos.size
