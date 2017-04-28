@@ -8,6 +8,7 @@ class Group():
         #list of items that can be recommended. These should not have been
         #watched by any member of group
         self.candidate_items = candidate_items
+        self.actual_recos = []
         
         #AF
         self.grp_factors_af = []
@@ -67,5 +68,25 @@ class Group():
                 
         return groups
     
-    
-    
+    def generate_actual_recommendations(self, ratings, threshold):
+        items = np.argwhere(ratings[self.members[0]] >= threshold)
+        for member in self.members:
+            cur_items = np.argwhere(ratings[member] >= threshold)
+            items = np.intersect1d(items, cur_items)
+
+        self.actual_recos = items
+
+    def evaluate_af(self):
+        tp = float(np.intersect1d(self.actual_recos, self.reco_list_af).size)
+        self.precision_af = tp / len(self.reco_list_af)
+        self.recall_af = tp / self.actual_recos.size
+
+    def evaluate_bf(self):
+        tp = float(np.intersect1d(self.actual_recos, self.reco_list_bf).size)
+        self.precision_bf = tp / len(self.reco_list_bf)
+        self.recall_bf = tp / self.actual_recos.size
+
+    def evaluate_wbf(self):
+        tp = float(np.intersect1d(self.actual_recos, self.reco_list_wbf).size)
+        self.precision_wbf = tp / len(self.reco_list_wbf)
+        self.recall_wbf = tp / self.actual_recos.size
