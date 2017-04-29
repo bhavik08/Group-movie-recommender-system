@@ -86,6 +86,9 @@ class Group():
         self.precision_af = tp / (tp + fp)
         self.recall_af = tp / self.actual_recos.size
 
+        print "\nPrecision: " + str(self.precision_af)
+        print "Recall: " + str(self.recall_af)
+
     def evaluate_bf(self):
         tp = float(np.intersect1d(self.actual_recos, self.reco_list_bf).size)
         fp = float(np.intersect1d(self.false_positive, self.reco_list_bf).size)
