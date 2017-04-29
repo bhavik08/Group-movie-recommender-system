@@ -3,7 +3,7 @@ import numpy as np
 class Group():
     def __init__(self, config, members, candidate_items):
         #member ids
-        self.members = members
+        self.members = sorted(members)
         
         #list of items that can be recommended. These should not have been
         #watched by any member of group
@@ -70,11 +70,11 @@ class Group():
         return groups
     
     def generate_actual_recommendations(self, ratings, threshold):
-        items = np.argwhere(ratings[self.members[0]] >= threshold)
-        fp = np.argwhere(ratings[self.members[0]] > 0 and ratings[self.members[0]] < threshold)
+        items = np.argwhere(ratings[self.members[0]] >= threshold).flatten()
+        fp = np.argwhere(np.logical_and(ratings[self.members[0]] > 0, ratings[self.members[0]] < threshold)).flatten()
         for member in self.members:
-            cur_items = np.argwhere(ratings[member] >= threshold)
-            fp = np.union1d(fp, np.argwhere(ratings[member] > 0 and ratings[member] < threshold))
+            cur_items = np.argwhere(ratings[member] >= threshold).flatten()
+            fp = np.union1d(fp, np.argwhere(np.logical_and(ratings[member] > 0, ratings[member] < threshold)).flatten())
             items = np.union1d(items, cur_items)
 
         self.actual_recos = items

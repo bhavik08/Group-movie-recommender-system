@@ -51,15 +51,19 @@ class GroupRec:
         pass
     
     #read training and testing data into matrices
-    def read_data(self, file):
+    def read_data(self, file, is_training = True):
         column_headers = ['user_id', 'item_id', 'rating', 'timestamp']
         print 'Reading data from ', file, '...'
         data = ps.read_csv(file, sep = '\t', names = column_headers)
         #print 'Reading testing data from ', self.cfg.testing_file, '...'
         #testing_data = ps.read_csv(self.cfg.testing_file, sep = '\t', names = column_headers)
         
-        num_users = max(data.user_id.unique())
-        num_items = max(data.item_id.unique())
+        if is_training:
+            num_users = max(data.user_id.unique())
+            num_items = max(data.item_id.unique())
+        else:
+            num_users = self.num_users
+            num_items = self.num_items
         
         self.ratings = np.zeros((num_users, num_items))
         
@@ -78,14 +82,14 @@ class GroupRec:
     def predict_group_rating(self, group, item, method):
         #bias_grp and
         if (method == 'af'):
-            factors = self.grp_factors_af; bias_group = self.bias_af
+            factors = group.grp_factors_af; bias_group = group.bias_af
         elif (method == 'bf'):
-            factors = self.grp_factors_bf; bias_group = self.bias_bf
+            factors = group.grp_factors_bf; bias_group = group.bias_bf
         elif (method == 'wbf'):
-            factors = self.grp_factors_wbf; bias_group = self.bias_wbf
+            factors = group.grp_factors_wbf; bias_group = group.bias_wbf
         
         return self.ratings_global_mean + bias_group + self.item_biases[item] \
-                                        + sum(np.dot(factors, self.item_factors))
+                                        + np.dot(factors.T, self.item_factors[item])
         
     #matrix factorization code, this should be run before af, bf or wbf
     #outputs from this are used in methods
@@ -149,8 +153,30 @@ class GroupRec:
             groups = self.groups
         
         #calculate factors
-        #aggregate the factors
-        pass
+        for group in groups:
+            member_factors = self.user_factors[group.members, :]
+            member_biases = self.user_biases[group.members]
+        
+            #aggregate the factors
+            group.grp_factors_af = aggregator(member_factors)
+            group.bias_af = aggregator(member_biases)
+            
+            #predict ratings for all candidate items
+            group_candidate_ratings = np.zeros(group.candidate_items.size)
+            for idx, item in enumerate(group.candidate_items):
+                group_candidate_ratings[idx] += self.predict_group_rating(group, item, 'af')
+            
+            #filter to keep top 'num_recos_af' recommendations
+            sorted_indices = group_candidate_ratings.argsort()
+            group.reco_list_af = group.candidate_items[sorted_indices[:self.cfg.num_recos_af]]
+            
+            #sorted ratings of recommended items
+            group_candidate_ratings = sorted(group_candidate_ratings)[:self.cfg.num_recos_af]
+            
+            print 'members: ', group.members
+            print 'recommended items: ', group.reco_list_af
+            print 'recommended item ratings: ', group_candidate_ratings
+            
     
     def bf_runner(self, groups = None, aggregator = Aggregators.average):
         #aggregate user ratings into virtual group
@@ -161,7 +187,7 @@ class GroupRec:
         pass
 
     def evaluation(self):
-        self.read_data(self.cfg.testing_file)
+        self.read_data(self.cfg.testing_file, False)
 
         # For AF
         for grp in self.groups:
@@ -189,14 +215,14 @@ if __name__ == "__main__":
     
     #add groups or generate random groups of given size
     groups = []
-    members = [1,2,3,4]
+    members = [1,2,3]
     candidate_items = Group.find_candidate_items(gr.ratings, members)
     if len(candidate_items) != 0:
-        Group(gr.cfg, members, candidate_items)
+        groups = [Group(gr.cfg, members, candidate_items)]
     
     #OR generate groups programmatically
     #disjoint means none of the groups shares any common members     
-    groups = Group.generate_groups(gr.cfg, gr.ratings, gr.num_users, 10, gr.cfg.small_grp_size, disjoint=True)
+#     groups = Group.generate_groups(gr.cfg, gr.ratings, gr.num_users, 10, gr.cfg.small_grp_size, disjoint=True)
     gr.add_groups(groups)
     
     #generated groups
