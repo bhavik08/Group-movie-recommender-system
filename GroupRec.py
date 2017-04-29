@@ -168,10 +168,10 @@ class GroupRec:
             
             #filter to keep top 'num_recos_af' recommendations
             sorted_indices = group_candidate_ratings.argsort()
-            group.reco_list_af = group.candidate_items[sorted_indices[:self.cfg.num_recos_af]]
+            group.reco_list_af = group.candidate_items[sorted_indices]
             
             #sorted ratings of recommended items
-            group_candidate_ratings = sorted(group_candidate_ratings)[:self.cfg.num_recos_af]
+            group_candidate_ratings = sorted(group_candidate_ratings)
             
             print 'members: ', group.members
             print 'recommended items: ', group.reco_list_af
@@ -215,14 +215,14 @@ if __name__ == "__main__":
     
     #add groups or generate random groups of given size
     groups = []
-    members = [1,2,3]
+    members = [475, 549, 775]
     candidate_items = Group.find_candidate_items(gr.ratings, members)
     if len(candidate_items) != 0:
         groups = [Group(gr.cfg, members, candidate_items)]
     
     #OR generate groups programmatically
     #disjoint means none of the groups shares any common members     
-#     groups = Group.generate_groups(gr.cfg, gr.ratings, gr.num_users, 10, gr.cfg.small_grp_size, disjoint=True)
+    #groups = Group.generate_groups(gr.cfg, gr.ratings, gr.num_users, 10, gr.cfg.small_grp_size, disjoint=True)
     gr.add_groups(groups)
     
     #generated groups
