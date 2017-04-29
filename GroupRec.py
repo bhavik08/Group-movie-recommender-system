@@ -176,12 +176,44 @@ class GroupRec:
             print 'members: ', group.members
             print 'recommended items: ', group.reco_list_af
             print 'recommended item ratings: ', group_candidate_ratings
-            
-    
-    def bf_runner(self, groups = None, aggregator = Aggregators.average):
-        #aggregate user ratings into virtual group
-        #calculate factors of group
-        pass
+
+    def bf_runner(self, groups=None, aggregator=Aggregators.average):
+        # aggregate user ratings into virtual group
+        # calculate factors of group
+        print groups
+        lamb = self.cfg.lambda_mf
+        for group in groups:
+            watched_items = np.argwhere(self.ratings[group.members[0]] != 0).flatten()  # movies rated by first member
+            for member in group.members:
+                cur_watched = np.argwhere(self.ratings[member] != 0)
+                watched_items = np.union1d(watched_items, cur_watched.flatten())
+
+            s_g = []
+            for j in range(len(watched_items)):
+                s_g.append(watched_items[j] - self.ratings_global_mean - self.item_biases[item])
+            print s_g
+
+            # creating matrix A : contains rows of [item_factors of items in watched_list + '1' vector]
+            A = np.zeros((0, 3))  # 3 is the number of features here = K
+
+            for item in watched_items:
+                A = np.vstack([A, self.item_factors[item]])
+            v = np.ones((len(watched_items), 1))
+            A = np.c_[A, v]
+            print A
+            factor_n_bias = (np.linalg.inv((A.T) * A + lamb * np.identity(3 + 1))) * A.T * s_g
+            group_factor = factor_n_bias[:-1]
+            group_bias = factor_n_bias[-1]
+
+            # Making recommendations on candidate list :
+            predicted_items = []
+            for item in self.find_candidate_items:
+                # calculating predicted score :
+                pred = self.ratings_global_mean + self.item_biases[item] + group_bias + (group_factor).T * \
+                                                                                        self.item_factors[item]
+                predicted_items.append(pred)
+            # returning top 50 items from predicted list
+            print 'We believe', group, 'will enjoy these movies!', sorted(predicted_items)[:50]
         
     def wbf_runner(self, groups = None, aggregator = Aggregators.average):
         pass
