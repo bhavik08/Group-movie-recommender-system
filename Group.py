@@ -70,12 +70,22 @@ class Group():
         return groups
     
     def generate_actual_recommendations(self, ratings, threshold):
-        items = np.argwhere(ratings[self.members[0]] >= threshold).flatten()
+        print('threshold, ', threshold)
+        
+        non_eval_items = np.argwhere(ratings[self.members[0]] == 0)
+        
+        for member in self.members:
+            cur_non_eval_items = np.argwhere(ratings[member] == 0)
+            non_eval_items = np.intersect1d(non_eval_items, cur_non_eval_items)
+            
+        items = np.argwhere(np.logical_or(ratings[self.members[0]] >= threshold, ratings[self.members[0]] == 0)).flatten()
         fp = np.argwhere(np.logical_and(ratings[self.members[0]] > 0, ratings[self.members[0]] < threshold)).flatten()
         for member in self.members:
-            cur_items = np.argwhere(ratings[member] >= threshold).flatten()
+            cur_items = np.argwhere(np.logical_or(ratings[member] >= threshold, ratings[member] == 0)).flatten()
             fp = np.union1d(fp, np.argwhere(np.logical_and(ratings[member] > 0, ratings[member] < threshold)).flatten())
-            items = np.union1d(items, cur_items)
+            items = np.intersect1d(items, cur_items)
+        
+        items = np.setdiff1d(items, non_eval_items)
 
         self.actual_recos = items
         self.false_positive = fp
@@ -84,7 +94,9 @@ class Group():
         tp = float(np.intersect1d(self.actual_recos, self.reco_list_af).size)
         fp = float(np.intersect1d(self.false_positive, self.reco_list_af).size)
         self.precision_af = tp / (tp + fp)
+        print 'precision_af: ', self.precision_af
         self.recall_af = tp / self.actual_recos.size
+        print 'recall_af: ', self.recall_af
 
         print "\nPrecision: " + str(self.precision_af)
         print "Recall: " + str(self.recall_af)
