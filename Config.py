@@ -32,7 +32,7 @@ class Config:
         self.num_recos_bf = int(configParser.get('Config', 'num_recos_bf'))
         
         #WBF (weighted before factorization)
-        self.rating_threshold_af = float(configParser.get('Config', 'rating_threshold_wbf'))
+        self.rating_threshold_wbf = float(configParser.get('Config', 'rating_threshold_wbf'))
         self.num_recos_wbf = int(configParser.get('Config', 'num_recos_wbf'))
         
         
