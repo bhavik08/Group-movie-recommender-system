@@ -50,6 +50,11 @@ class GroupRec:
         self.groups = groups
         pass
     
+    #remove groups
+    def remove_groups(self, groups):
+        self.groups = []
+        pass
+    
     #read training and testing data into matrices
     def read_data(self, file):
         column_headers = ['user_id', 'item_id', 'rating', 'timestamp']
@@ -295,6 +300,17 @@ class GroupRec:
 #             grp.generate_actual_recommendations(self.ratings, self.cfg.rating_threshold_wbf)
 #             grp.evaluate_wbf()
 
+    def run_all_methods(self, groups):
+        if (groups is None):
+            groups = self.groups
+        #PS: could call them without passing groups as we have already added groups to grouprec object
+        self.af_runner(groups, Aggregators.weighted_average)
+    #     gr.bf_runner(groups, Aggregators.median)
+    #     gr.wbf_runner(groups, Aggregators.least_misery)
+
+        #evaluation
+        self.evaluation()
+    
 
 if __name__ == "__main__":
     #Workflow
@@ -313,20 +329,24 @@ if __name__ == "__main__":
     
     #OR generate groups programmatically
     #disjoint means none of the groups shares any common members     
-    groups = Group.generate_groups(gr.cfg, gr.ratings, gr.test_ratings, gr.num_users, 10, gr.cfg.small_grp_size, disjoint=True)
-    gr.add_groups(groups)
+    small_groups = Group.generate_groups(gr.cfg, gr.ratings, gr.test_ratings, gr.num_users, 3, gr.cfg.small_grp_size, disjoint=True)
+    medium_groups = Group.generate_groups(gr.cfg, gr.ratings, gr.test_ratings, gr.num_users, 3, gr.cfg.medium_grp_size, disjoint=True)
+    large_groups = Group.generate_groups(gr.cfg, gr.ratings, gr.test_ratings, gr.num_users, 3, gr.cfg.large_grp_size, disjoint=True)
     
-    #generated groups
-    print 'generated groups: '
-    for group in groups:
-        print(group.members)
+    group_set = [small_groups, medium_groups, large_groups]
+    group_type = ['small', 'medium', 'large']
     
-    #PS: could call them without passing groups as we have already added groups to grouprec object
-    gr.af_runner(groups, Aggregators.weighted_average)
-#     gr.bf_runner(groups, Aggregators.median)
-#     gr.wbf_runner(groups, Aggregators.least_misery)
-
-    #evaluation
-    gr.evaluation()
-    pass
+    for idx, groups in enumerate(group_set):
+        if groups is []: continue;
+        
+        #generated groups
+        print '******* Running for ', group_type[idx], ' groups *************'
+        print 'generated groups: '
+        for group in groups:
+            print(group.members)
+        
+        gr.add_groups(groups)
+        gr.run_all_methods(groups)
+        gr.remove_groups(groups)    
+        pass
 
