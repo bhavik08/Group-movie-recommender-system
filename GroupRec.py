@@ -51,24 +51,24 @@ class GroupRec:
         pass
     
     #read training and testing data into matrices
-    def read_data(self, file, is_training = True):
+    def read_data(self, file):
         column_headers = ['user_id', 'item_id', 'rating', 'timestamp']
         print 'Reading data from ', file, '...'
         data = ps.read_csv(file, sep = '\t', names = column_headers)
-        #print 'Reading testing data from ', self.cfg.testing_file, '...'
-        #testing_data = ps.read_csv(self.cfg.testing_file, sep = '\t', names = column_headers)
+        print 'Reading testing data from ', self.cfg.testing_file, '...'
+        testing_data = ps.read_csv(self.cfg.testing_file, sep = '\t', names = column_headers)
         
-        if is_training:
-            num_users = max(data.user_id.unique())
-            num_items = max(data.item_id.unique())
-        else:
-            num_users = self.num_users
-            num_items = self.num_items
+        num_users = max(data.user_id.unique())
+        num_items = max(data.item_id.unique())
         
         self.ratings = np.zeros((num_users, num_items))
+        self.test_ratings = np.zeros((num_users, num_items))
         
         for row in data.itertuples(index = False):
-            self.ratings[row.user_id - 1, row.item_id - 1] = row.rating 
+            self.ratings[row.user_id - 1, row.item_id - 1] = row.rating
+        
+        for row in testing_data.itertuples(index = False):
+            self.test_ratings[row.user_id - 1, row.item_id - 1] = row.rating 
         
     #split data set file into training and test file by ratio 
     def split_data(self, data_file, training_ratio = 0.7):
@@ -137,11 +137,16 @@ class GroupRec:
     
     def sgd_mse(self):
         self.predict_all_ratings()
-        predicted_ratings = self.predictions[self.ratings.nonzero()].flatten()
-        actual_ratings = self.ratings[self.ratings.nonzero()].flatten()
+        predicted_training_ratings = self.predictions[self.ratings.nonzero()].flatten()
+        actual_training_ratings = self.ratings[self.ratings.nonzero()].flatten()
+        
+        predicted_test_ratings = self.predictions[self.test_ratings.nonzero()].flatten()
+        actual_test_ratings = self.test_ratings[self.test_ratings.nonzero()].flatten()
     
-        mse = mean_squared_error(predicted_ratings, actual_ratings)
-        print 'mse: ', mse
+        training_mse = mean_squared_error(predicted_training_ratings, actual_training_ratings)
+        print 'training mse: ', training_mse
+        test_mse = mean_squared_error(predicted_test_ratings, actual_test_ratings)
+        print 'test mse: ', test_mse
             
         
     #AF method
@@ -158,24 +163,28 @@ class GroupRec:
             member_biases = self.user_biases[group.members]
         
             #aggregate the factors
-            group.grp_factors_af = aggregator(member_factors)
-            group.bias_af = aggregator(member_biases)
+            if (aggregator == Aggregators.average):
+                group.grp_factors_af = aggregator(member_factors)
+                group.bias_af = aggregator(member_biases)
+            elif (aggregator == Aggregators.weighted_average):
+                group.grp_factors_af = aggregator(member_factors, weights = group.ratings_per_member)
+                group.bias_af = aggregator(member_biases, weights = group.ratings_per_member)
             
             #predict ratings for all candidate items
-            group_candidate_ratings = np.zeros(group.candidate_items.size)
+            group_candidate_ratings = {}
             for idx, item in enumerate(group.candidate_items):
-                group_candidate_ratings[idx] += self.predict_group_rating(group, item, 'af')
+                cur_rating = self.predict_group_rating(group, item, 'af')
+                
+                if (cur_rating > self.cfg.rating_threshold_af):
+                    group_candidate_ratings[item] = cur_rating
             
-            #filter to keep top 'num_recos_af' recommendations
-            sorted_indices = group_candidate_ratings.argsort()
-            group.reco_list_af = group.candidate_items[sorted_indices]
+            #sort and filter to keep top 'num_recos_af' recommendations
+            group_candidate_ratings = sorted(group_candidate_ratings.items(), key=lambda x: x[1], reverse=True)[:self.cfg.num_recos_af]
             
-            #sorted ratings of recommended items
-            group_candidate_ratings = sorted(group_candidate_ratings)
-            
-            print 'members: ', group.members
-            print 'recommended items: ', group.reco_list_af
-            print 'recommended item ratings: ', group_candidate_ratings
+            group.reco_list_af = np.array([rating_tuple[0] for rating_tuple in group_candidate_ratings])
+#             print 'members: ', group.members
+#             print 'recommended items: ', group.reco_list_af
+#             print 'recommended item ratings: ', group_candidate_ratings 
 
     def bf_runner(self, groups=None, aggregator=Aggregators.average):
         # aggregate user ratings into virtual group
@@ -189,7 +198,7 @@ class GroupRec:
 
             s_g = []
             for j in range(len(watched_items)):
-                s_g.append(watched_items[j] - self.ratings_global_mean - self.item_biases[item])
+                s_g.append(watched_items[j] - self.ratings_global_mean - self.item_biases[j])
 
             # creating matrix A : contains rows of [item_factors of items in watched_list + '1' vector]
             A = np.zeros((0, 3))  # 3 is the number of features here = K
@@ -225,7 +234,8 @@ class GroupRec:
 
             s_g = []
             for j in range(len(watched_items)):
-                s_g.append(watched_items[j] - self.ratings_global_mean - self.item_biases[item])
+                s_g.append(watched_items[j] - self.ratings_global_mean - self.item_biases[j])
+                pass
 
             # creating matrix A : contains rows of [item_factors of items in watched_list + '1' vector]
             A = np.zeros((0, 3))
@@ -239,7 +249,7 @@ class GroupRec:
             for item in watched_items:
                 rated = np.argwhere(self.ratings[:, item] != 0)  # list of users who have rated this movie
                 watched = np.intersect1d(rated, group)  # list of group members who have watched this movie
-                std_dev = np.std(filter(lambda a: a != 0, ratings[:, item]))  # std deviation for the rating of the item
+                std_dev = np.std(filter(lambda a: a != 0, self.ratings[:, item]))  # std deviation for the rating of the item
                 wt += [len(watched) / float(len(group)) * 1 / (1 + std_dev)]  # list containing diagonal elements
             W = np.diag(wt)  # diagonal weight matrix
 
@@ -258,22 +268,32 @@ class GroupRec:
             print 'We believe', group, 'will enjoy these movies!', sorted(predicted_items)[:50]
 
     def evaluation(self):
-        self.read_data(self.cfg.testing_file, False)
+#         self.read_data(self.cfg.testing_file, False)
 
         # For AF
+        af_precision_list = []
+        af_recall_list = []
+        af_mean_precision = 0
         for grp in self.groups:
-            grp.generate_actual_recommendations(self.ratings, self.cfg.rating_threshold_af)
-            grp.evaluate_af()
+            grp.generate_actual_recommendations(self.test_ratings, self.cfg.rating_threshold_af)
+            (precision, recall, tp, fp) = grp.evaluate_af()
+            af_precision_list.append(precision)
+            af_recall_list.append(recall)
+        
+        af_mean_precision = np.nanmean(np.array(af_precision_list))
+        af_mean_recall = np.nanmean(np.array(af_recall_list))
+        print 'AF method: mean precision: ', af_mean_precision
+        print 'AF method: mean recall: ', af_mean_recall
 
         # For BF
-        for grp in self.groups:
-            grp.generate_actual_recommendations(self.ratings, self.cfg.rating_threshold_bf)
-            grp.evaluate_bf()
-
-        # For WBF
-        for grp in self.groups:
-            grp.generate_actual_recommendations(self.ratings, self.cfg.rating_threshold_wbf)
-            grp.evaluate_wbf()
+#         for grp in self.groups:
+#             grp.generate_actual_recommendations(self.ratings, self.cfg.rating_threshold_bf)
+#             grp.evaluate_bf()
+# 
+#         # For WBF
+#         for grp in self.groups:
+#             grp.generate_actual_recommendations(self.ratings, self.cfg.rating_threshold_wbf)
+#             grp.evaluate_wbf()
 
 
 if __name__ == "__main__":
@@ -289,11 +309,11 @@ if __name__ == "__main__":
     members = [475, 549, 775]
     candidate_items = Group.find_candidate_items(gr.ratings, members)
     if len(candidate_items) != 0:
-        groups = [Group(gr.cfg, members, candidate_items)]
+        groups = [Group(gr.cfg, members, candidate_items, gr.ratings)]
     
     #OR generate groups programmatically
     #disjoint means none of the groups shares any common members     
-    #groups = Group.generate_groups(gr.cfg, gr.ratings, gr.num_users, 10, gr.cfg.small_grp_size, disjoint=True)
+    groups = Group.generate_groups(gr.cfg, gr.ratings, gr.test_ratings, gr.num_users, 10, gr.cfg.small_grp_size, disjoint=True)
     gr.add_groups(groups)
     
     #generated groups
@@ -302,9 +322,9 @@ if __name__ == "__main__":
         print(group.members)
     
     #PS: could call them without passing groups as we have already added groups to grouprec object
-    gr.af_runner(groups, Aggregators.average)
-    gr.bf_runner(groups, Aggregators.median)
-    gr.wbf_runner(groups, Aggregators.least_misery)
+    gr.af_runner(groups, Aggregators.weighted_average)
+#     gr.bf_runner(groups, Aggregators.median)
+#     gr.wbf_runner(groups, Aggregators.least_misery)
 
     #evaluation
     gr.evaluation()

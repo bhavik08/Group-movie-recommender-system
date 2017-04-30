@@ -1,7 +1,7 @@
 import numpy as np
 
 class Group():
-    def __init__(self, config, members, candidate_items):
+    def __init__(self, config, members, candidate_items, ratings):
         #member ids
         self.members = sorted(members)
         
@@ -10,6 +10,8 @@ class Group():
         self.candidate_items = candidate_items
         self.actual_recos = []
         self.false_positive = []
+        
+        self.ratings_per_member = [np.size(ratings[member].nonzero()) for member in self.members]
         
         #AF
         self.grp_factors_af = []
@@ -55,28 +57,35 @@ class Group():
     
     #programmatically generate groups of given size
     @staticmethod
-    def generate_groups(cfg, ratings, num_users, count, size, disjoint = True):
+    def generate_groups(cfg, ratings, test_ratings, num_users, count, size, disjoint = True):
         avbl_users = [i for i in range(num_users)]
         groups = []
+        testable_threshold = 50
         
-        for iter in range(count):
+        iter_idx = 0
+        while iter_idx in range(count):
             group_members = np.random.choice(avbl_users, size = size, replace = False)
             candidate_items = Group.find_candidate_items(ratings, group_members)
+            non_eval_items = Group.non_testable_items(group_members, test_ratings)
+            testable_items = np.setdiff1d(candidate_items, non_eval_items)
             
-            if len(candidate_items) != 0:
-                groups += [Group(cfg, group_members, candidate_items)]
+            if len(candidate_items) != 0 and len(testable_items) >= testable_threshold:
+                groups += [Group(cfg, group_members, candidate_items, ratings)]
                 avbl_users = np.setdiff1d(avbl_users, group_members)
+                iter_idx += 1
                 
         return groups
     
-    def generate_actual_recommendations(self, ratings, threshold):
-        print('threshold, ', threshold)
-        
-        non_eval_items = np.argwhere(ratings[self.members[0]] == 0)
-        
-        for member in self.members:
+    @staticmethod
+    def non_testable_items(members, ratings): 
+        non_eval_items = np.argwhere(ratings[members[0]] == 0)
+        for member in members:
             cur_non_eval_items = np.argwhere(ratings[member] == 0)
             non_eval_items = np.intersect1d(non_eval_items, cur_non_eval_items)
+        return non_eval_items
+    
+    def generate_actual_recommendations(self, ratings, threshold):
+        non_eval_items = Group.non_testable_items(self.members, ratings)
             
         items = np.argwhere(np.logical_or(ratings[self.members[0]] >= threshold, ratings[self.members[0]] == 0)).flatten()
         fp = np.argwhere(np.logical_and(ratings[self.members[0]] > 0, ratings[self.members[0]] < threshold)).flatten()
@@ -88,15 +97,29 @@ class Group():
         items = np.setdiff1d(items, non_eval_items)
 
         self.actual_recos = items
+#         print 'acutal reco list: ', self.actual_recos
         self.false_positive = fp
 
     def evaluate_af(self):
         tp = float(np.intersect1d(self.actual_recos, self.reco_list_af).size)
+        print 'tp: ', tp
         fp = float(np.intersect1d(self.false_positive, self.reco_list_af).size)
-        self.precision_af = tp / (tp + fp)
-        print 'precision_af: ', self.precision_af
-        self.recall_af = tp / self.actual_recos.size
+        print 'fp: ', fp
+        
+        try:
+            self.precision_af = tp / (tp + fp)
+            print 'precision_af: ', self.precision_af
+        except ZeroDivisionError:
+            self.precision_af = np.NaN
+            print 'precision_af: ', self.precision_af
+            
+        try:
+            self.recall_af = tp / self.actual_recos.size
+        except ZeroDivisionError:
+            self.recall_af = np.NaN
         print 'recall_af: ', self.recall_af
+        
+        return (self.precision_af, self.recall_af, tp, fp)
 
         print "\nPrecision: " + str(self.precision_af)
         print "Recall: " + str(self.recall_af)
