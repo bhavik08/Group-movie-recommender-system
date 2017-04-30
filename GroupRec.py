@@ -196,54 +196,61 @@ class GroupRec:
         # calculate factors of group
         lamb = self.cfg.lambda_mf
         for group in groups:
-            watched_items = np.argwhere(self.ratings[group.members[0]] != 0).flatten()  # movies rated by first member
-            for member in group.members:
-                cur_watched = np.argwhere(self.ratings[member] != 0)
-                watched_items = np.union1d(watched_items, cur_watched.flatten())
+            all_movies = np.arange(len(self.ratings.T))
+            watched_items = sorted(list(set(all_movies) - set(group.candidate_items)))
 
+            group_rating = self.ratings[group.members, :]
+            agg_rating = aggregator(group_rating)
             s_g = []
-            for j in range(len(watched_items)):
-                s_g.append(watched_items[j] - self.ratings_global_mean - self.item_biases[j])
+            for j in watched_items:
+                s_g.append(agg_rating[j] - self.ratings_global_mean - self.item_biases[j])
 
             # creating matrix A : contains rows of [item_factors of items in watched_list + '1' vector]
-            A = np.zeros((0, 3))  # 3 is the number of features here = K
+            A = np.zeros((0, self.cfg.num_factors))
 
             for item in watched_items:
                 A = np.vstack([A, self.item_factors[item]])
             v = np.ones((len(watched_items), 1))
             A = np.c_[A, v]
 
-            factor_n_bias = (np.linalg.inv((A.T) * A + lamb * np.identity(3 + 1))) * A.T * s_g
-            group_factor = factor_n_bias[:-1]
-            group_bias = factor_n_bias[-1]
+            factor_n_bias = np.dot(np.linalg.inv(np.dot(A.T, A) + lamb * np.identity(self.cfg.num_factors + 1)), np.dot(A.T, s_g))
+            group.grp_factors_bf = factor_n_bias[:-1]
+            group.bias_bf = factor_n_bias[-1]
 
             # Making recommendations on candidate list :
-            predicted_items = []
-            for item in self.find_candidate_items:
-                # calculating predicted score :
-                pred = self.ratings_global_mean + self.item_biases[item] + group_bias + (group_factor).T * \
-                                                                                        self.item_factors[item]
-                predicted_items.append(pred)
-            # returning top 50 items from predicted list
-            print 'We believe', group, 'will enjoy these movies!', sorted(predicted_items)[:50]
+            group_candidate_ratings = {}
+            for idx, item in enumerate(group.candidate_items):
+                cur_rating = self.predict_group_rating(group, item, 'bf')
+
+                if (cur_rating > self.cfg.rating_threshold_bf):
+                    group_candidate_ratings[item] = cur_rating
+
+            # sort and filter to keep top 'num_recos_bf' recommendations
+            group_candidate_ratings = sorted(group_candidate_ratings.items(), key=lambda x: x[1], reverse=True)[
+                                      :self.cfg.num_recos_bf]
+
+            group.reco_list_bf = np.array([rating_tuple[0] for rating_tuple in group_candidate_ratings])
+            #             print 'members: ', group.members
+            #             print 'recommended items: ', group.reco_list_bf
+            #             print 'recommended item ratings: ', group_candidate_ratings
+
 
     def wbf_runner(self, groups=None, aggregator=Aggregators.average):
         # aggregate user ratings into virtual group
         # calculate factors of group
         lamb = self.cfg.lambda_mf
         for group in groups:
-            watched_items = np.argwhere(self.ratings[group.members[0]] != 0).flatten()  # movies rated by first member
-            for member in group.members:
-                cur_watched = np.argwhere(self.ratings[member] != 0)
-                watched_items = np.union1d(watched_items, cur_watched.flatten())
+            all_movies = np.arange(len(self.ratings.T))
+            watched_items = sorted(list(set(all_movies) - set(group.candidate_items)))
 
+            group_rating = self.ratings[group.members, :]
+            agg_rating = aggregator(group_rating)
             s_g = []
-            for j in range(len(watched_items)):
-                s_g.append(watched_items[j] - self.ratings_global_mean - self.item_biases[j])
-                pass
+            for j in watched_items:
+                s_g.append(agg_rating[j] - self.ratings_global_mean - self.item_biases[j])
 
             # creating matrix A : contains rows of [item_factors of items in watched_list + '1' vector]
-            A = np.zeros((0, 3))
+            A = np.zeros((0, self.cfg.num_factors))  # 3 is the number of features here = K
 
             for item in watched_items:
                 A = np.vstack([A, self.item_factors[item]])
@@ -255,22 +262,32 @@ class GroupRec:
                 rated = np.argwhere(self.ratings[:, item] != 0)  # list of users who have rated this movie
                 watched = np.intersect1d(rated, group)  # list of group members who have watched this movie
                 std_dev = np.std(filter(lambda a: a != 0, self.ratings[:, item]))  # std deviation for the rating of the item
-                wt += [len(watched) / float(len(group)) * 1 / (1 + std_dev)]  # list containing diagonal elements
+                wt += [len(watched) / float(len(group.members)) * 1 / (1 + std_dev)]  # list containing diagonal elements
             W = np.diag(wt)  # diagonal weight matrix
 
-            factor_n_bias = (np.linalg.inv((A.T) * W * A + lamb * np.identity(3 + 1))) * A.T * W * s_g
-            group_factor = factor_n_bias[:-1]
-            group_bias = factor_n_bias[-1]
+            factor_n_bias = np.dot(np.linalg.inv(np.dot(np.dot(A.T, W),A) + lamb * np.identity(self.cfg.num_factors + 1)),
+                                   np.dot(np.dot(A.T, W), s_g))
+            group.grp_factors_wbf = factor_n_bias[:-1]
+            group.bias_wbf = factor_n_bias[-1]
 
             # Making recommendations on candidate list :
-            predicted_items = []
-            for item in self.find_candidate_items:
-                # calculating predicted score :
-                pred = self.ratings_global_mean + self.item_biases[item] + group_bias + (group_factor).T * \
-                                                                                        self.item_factors[item]
-                predicted_items.append(pred)
-            # returning top 50 items from predicted list
-            print 'We believe', group, 'will enjoy these movies!', sorted(predicted_items)[:50]
+            group_candidate_ratings = {}
+            for idx, item in enumerate(group.candidate_items):
+                cur_rating = self.predict_group_rating(group, item, 'wbf')
+
+                if (cur_rating > self.cfg.rating_threshold_wbf):
+                    group_candidate_ratings[item] = cur_rating
+
+            # sort and filter to keep top 'num_recos_wbf' recommendations
+            group_candidate_ratings = sorted(group_candidate_ratings.items(), key=lambda x: x[1], reverse=True)[
+                                      :self.cfg.num_recos_wbf]
+
+            group.reco_list_wbf = np.array([rating_tuple[0] for rating_tuple in group_candidate_ratings])
+            #             print 'members: ', group.members
+            #             print 'recommended items: ', group.reco_list_wbf
+            #             print 'recommended item ratings: ', group_candidate_ratings
+
+        pass
 
     def evaluation(self):
 #         self.read_data(self.cfg.testing_file, False)
@@ -290,23 +307,53 @@ class GroupRec:
         print 'AF method: mean precision: ', af_mean_precision
         print 'AF method: mean recall: ', af_mean_recall
 
-        # For BF
-#         for grp in self.groups:
-#             grp.generate_actual_recommendations(self.ratings, self.cfg.rating_threshold_bf)
-#             grp.evaluate_bf()
-# 
-#         # For WBF
-#         for grp in self.groups:
-#             grp.generate_actual_recommendations(self.ratings, self.cfg.rating_threshold_wbf)
-#             grp.evaluate_wbf()
+        #For BF
+        bf_precision_list = []
+        bf_recall_list = []
+        bf_mean_precision = 0
+        for grp in self.groups:
+            grp.generate_actual_recommendations(self.test_ratings, self.cfg.rating_threshold_bf)
+            (precision, recall, tp, fp) = grp.evaluate_bf()
+            bf_precision_list.append(precision)
+            bf_recall_list.append(recall)
+
+        bf_mean_precision = np.nanmean(np.array(bf_precision_list))
+        bf_mean_recall = np.nanmean(np.array(bf_recall_list))
+        print 'BF method: mean precision: ', bf_mean_precision
+        print 'BF method: mean recall: ', bf_mean_recall
+
+        #For BF
+        wbf_precision_list = []
+        wbf_recall_list = []
+        wbf_mean_precision = 0
+        for grp in self.groups:
+            grp.generate_actual_recommendations(self.test_ratings, self.cfg.rating_threshold_wbf)
+            (precision, recall, tp, fp) = grp.evaluate_wbf()
+            wbf_precision_list.append(precision)
+            wbf_recall_list.append(recall)
+
+        wbf_mean_precision = np.nanmean(np.array(wbf_precision_list))
+        wbf_mean_recall = np.nanmean(np.array(wbf_recall_list))
+        print 'WBF method: mean precision: ', wbf_mean_precision
+        print 'WBF method: mean recall: ', wbf_mean_recall
+
+        # # For BF
+        # for grp in self.groups:
+        #     grp.generate_actual_recommendations(self.ratings, self.cfg.rating_threshold_bf)
+        #     grp.evaluate_bf()
+        #
+        # # For WBF
+        # for grp in self.groups:
+        #     grp.generate_actual_recommendations(self.ratings, self.cfg.rating_threshold_wbf)
+        #     grp.evaluate_wbf()
 
     def run_all_methods(self, groups):
         if (groups is None):
             groups = self.groups
         #PS: could call them without passing groups as we have already added groups to grouprec object
         self.af_runner(groups, Aggregators.weighted_average)
-    #     gr.bf_runner(groups, Aggregators.median)
-    #     gr.wbf_runner(groups, Aggregators.least_misery)
+        self.bf_runner(groups, Aggregators.average)
+        self.wbf_runner(groups, Aggregators.average)
 
         #evaluation
         self.evaluation()
