@@ -191,7 +191,7 @@ class GroupRec:
 #             print 'recommended items: ', group.reco_list_af
 #             print 'recommended item ratings: ', group_candidate_ratings 
 
-    def bf_runner(self, groups=None, aggregator=Aggregators.average):
+    def bf_runner(self, groups=None, aggregator=Aggregators.average_bf):
         # aggregate user ratings into virtual group
         # calculate factors of group
         lamb = self.cfg.lambda_mf
@@ -235,7 +235,7 @@ class GroupRec:
             #             print 'recommended item ratings: ', group_candidate_ratings
 
 
-    def wbf_runner(self, groups=None, aggregator=Aggregators.average):
+    def wbf_runner(self, groups=None, aggregator=Aggregators.average_bf):
         # aggregate user ratings into virtual group
         # calculate factors of group
         lamb = self.cfg.lambda_mf
@@ -296,6 +296,7 @@ class GroupRec:
         af_precision_list = []
         af_recall_list = []
         af_mean_precision = 0
+        print "#########-------For AF-------#########"
         for grp in self.groups:
             grp.generate_actual_recommendations(self.test_ratings, self.cfg.rating_threshold_af)
             (precision, recall, tp, fp) = grp.evaluate_af()
@@ -304,13 +305,14 @@ class GroupRec:
         
         af_mean_precision = np.nanmean(np.array(af_precision_list))
         af_mean_recall = np.nanmean(np.array(af_recall_list))
-        print 'AF method: mean precision: ', af_mean_precision
+        print '\nAF method: mean precision: ', af_mean_precision
         print 'AF method: mean recall: ', af_mean_recall
 
         #For BF
         bf_precision_list = []
         bf_recall_list = []
         bf_mean_precision = 0
+        print "#########-------For BF-------#########"
         for grp in self.groups:
             grp.generate_actual_recommendations(self.test_ratings, self.cfg.rating_threshold_bf)
             (precision, recall, tp, fp) = grp.evaluate_bf()
@@ -319,13 +321,14 @@ class GroupRec:
 
         bf_mean_precision = np.nanmean(np.array(bf_precision_list))
         bf_mean_recall = np.nanmean(np.array(bf_recall_list))
-        print 'BF method: mean precision: ', bf_mean_precision
+        print '\nBF method: mean precision: ', bf_mean_precision
         print 'BF method: mean recall: ', bf_mean_recall
 
         #For BF
         wbf_precision_list = []
         wbf_recall_list = []
         wbf_mean_precision = 0
+        print "#########-------For WBF-------#########"
         for grp in self.groups:
             grp.generate_actual_recommendations(self.test_ratings, self.cfg.rating_threshold_wbf)
             (precision, recall, tp, fp) = grp.evaluate_wbf()
@@ -334,7 +337,7 @@ class GroupRec:
 
         wbf_mean_precision = np.nanmean(np.array(wbf_precision_list))
         wbf_mean_recall = np.nanmean(np.array(wbf_recall_list))
-        print 'WBF method: mean precision: ', wbf_mean_precision
+        print '\nWBF method: mean precision: ', wbf_mean_precision
         print 'WBF method: mean recall: ', wbf_mean_recall
 
         # # For BF
@@ -352,8 +355,8 @@ class GroupRec:
             groups = self.groups
         #PS: could call them without passing groups as we have already added groups to grouprec object
         self.af_runner(groups, Aggregators.weighted_average)
-        self.bf_runner(groups, Aggregators.average)
-        self.wbf_runner(groups, Aggregators.average)
+        self.bf_runner(groups, Aggregators.average_bf)
+        self.wbf_runner(groups, Aggregators.average_bf)
 
         #evaluation
         self.evaluation()
@@ -372,7 +375,8 @@ if __name__ == "__main__":
     members = [475, 549, 775]
     candidate_items = Group.find_candidate_items(gr.ratings, members)
     if len(candidate_items) != 0:
-        groups = [Group(gr.cfg, members, candidate_items, gr.ratings)]
+        pass
+        #groups = [Group(gr.cfg, members, candidate_items, gr.ratings)]
     
     #OR generate groups programmatically
     #disjoint means none of the groups shares any common members     

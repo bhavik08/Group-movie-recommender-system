@@ -102,7 +102,7 @@ class Group():
 
     def evaluate_af(self):
         tp = float(np.intersect1d(self.actual_recos, self.reco_list_af).size)
-        print 'tp: ', tp
+        print '\ntp: ', tp
         fp = float(np.intersect1d(self.false_positive, self.reco_list_af).size)
         print 'fp: ', fp
         
@@ -126,7 +126,7 @@ class Group():
 
     def evaluate_bf(self):
         tp = float(np.intersect1d(self.actual_recos, self.reco_list_bf).size)
-        print 'tp: ', tp
+        print '\ntp: ', tp
         fp = float(np.intersect1d(self.false_positive, self.reco_list_bf).size)
         print 'fp: ', fp
 
@@ -150,7 +150,7 @@ class Group():
 
     def evaluate_wbf(self):
         tp = float(np.intersect1d(self.actual_recos, self.reco_list_wbf).size)
-        print 'tp: ', tp
+        print '\ntp: ', tp
         fp = float(np.intersect1d(self.false_positive, self.reco_list_wbf).size)
         print 'fp: ', fp
 
