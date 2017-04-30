@@ -14,8 +14,7 @@ class Aggregators:
     @staticmethod
     def average_bf(arr):
         arr[arr == 0] = np.nan
-        arr1 = np.nanmean(arr, axis=0)
-        return arr1
+        return np.nanmean(arr, axis=0)
     
     @staticmethod
     def weighted_average(arr, weights):
