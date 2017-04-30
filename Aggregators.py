@@ -9,11 +9,11 @@ class Aggregators:
     #pass ratings or factors as input
     @staticmethod
     def average(arr):
-        return np.average(arr, axis = 0)
+        return np.average(arr, axis = 0, weights = None)
     
     @staticmethod
-    def weighted_average(arr):
-        pass
+    def weighted_average(arr, weights):
+        return np.average(arr, axis = 0, weights = weights)
     
     @staticmethod
     def mode(arr):
