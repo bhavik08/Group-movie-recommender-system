@@ -126,12 +126,50 @@ class Group():
 
     def evaluate_bf(self):
         tp = float(np.intersect1d(self.actual_recos, self.reco_list_bf).size)
+        print 'tp: ', tp
         fp = float(np.intersect1d(self.false_positive, self.reco_list_bf).size)
-        self.precision_bf = tp / (tp + fp)
-        self.recall_bf = tp / self.actual_recos.size
+        print 'fp: ', fp
+
+        try:
+            self.precision_bf = tp / (tp + fp)
+            print 'precision_bf: ', self.precision_bf
+        except ZeroDivisionError:
+            self.precision_bf = np.NaN
+            print 'precision_bf: ', self.precision_bf
+
+        try:
+            self.recall_bf = tp / self.actual_recos.size
+        except ZeroDivisionError:
+            self.recall_bf = np.NaN
+        print 'recall_bf: ', self.recall_bf
+
+        return (self.precision_bf, self.recall_bf, tp, fp)
+
+        print "\nPrecision: " + str(self.precision_bf)
+        print "Recall: " + str(self.recall_bf)
 
     def evaluate_wbf(self):
         tp = float(np.intersect1d(self.actual_recos, self.reco_list_wbf).size)
+        print 'tp: ', tp
         fp = float(np.intersect1d(self.false_positive, self.reco_list_wbf).size)
-        self.precision_wbf = tp / (tp + fp)
-        self.recall_wbf = tp / self.actual_recos.size
+        print 'fp: ', fp
+
+        try:
+            self.precision_wbf = tp / (tp + fp)
+            print 'precision_wbf: ', self.precision_wbf
+        except ZeroDivisionError:
+            self.precision_wbf = np.NaN
+            print 'precision_wbf: ', self.precision_wbf
+
+        try:
+            self.recall_wbf = tp / self.actual_recos.size
+        except ZeroDivisionError:
+            self.recall_wbf = np.NaN
+        print 'recall_wbf: ', self.recall_wbf
+
+        return (self.precision_wbf, self.recall_wbf, tp, fp)
+
+        print "\nPrecision: " + str(self.precision_wbf)
+        print "Recall: " + str(self.recall_wbf)
+
+
