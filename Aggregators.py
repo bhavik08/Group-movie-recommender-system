@@ -1,3 +1,4 @@
+import warnings
 import numpy as np
 
 
@@ -11,8 +12,10 @@ class Aggregators:
 
     @staticmethod
     def average_bf(arr):
-        arr[arr == 0] = np.nan
-        return np.nanmean(arr, axis=0)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            arr[arr == 0] = np.nan
+            return np.nanmean(arr, axis=0)
     
     @staticmethod
     def weighted_average(arr, weights):
