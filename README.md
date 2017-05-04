@@ -1,10 +1,10 @@
 # Group-movie-recommender-system
 In this project, we create a matrix factorization based Recommender System for a group of users.
 We try out 3 different methods.
-(1) After Factorization: where we aggregate factors of users into group factors after factorization
-(2) Before Factorization(BF): where we aggregate users' ratings into a virtual user.
-(3) Weighted Before Factorization(WBF): Same as BF except that no. of movies watched by users are taken
-    as weights. We solve it using ridge regression method.
+<li> After Factorization: where we aggregate factors of users into group factors after factorization </li>
+<li> Before Factorization(BF): where we aggregate users' ratings into a virtual user. </li>
+<li> Weighted Before Factorization(WBF): Same as BF except that no. of movies watched by users are taken
+    as weights. We solve it using ridge regression method. </li>
 
 ## Paper
 Project is based on the following paper:
