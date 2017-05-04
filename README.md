@@ -8,6 +8,7 @@ We try out 3 different methods.
 
 ## Paper
 Project is based on the following paper:
+
 http://www.sciencedirect.com/science/article/pii/S0020025516300196
 
 ## Dataset
@@ -20,7 +21,8 @@ Video: https://www.youtube.com/watch?v=ycf2sY2XnN8
 The notebook can be run directly.
 Dataset is included in the github repo.
 Also, the python code can be run by: 
-```python ./GroupRec.py
+```
+python ./GroupRec.py
 ```
 
 We are using pandas, numpy, scipy and warnings modules. Install them by
