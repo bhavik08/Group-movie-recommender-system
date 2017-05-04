@@ -49,6 +49,6 @@ Note: Since the notebook uses relative paths for dataset and images in res/
 subdirectory, please run in the same folder when it is cloned from repo.
 
 ## Flowchart
-[img]./res/flowchart.jpg
+![alt text](./res/flowchart.jpg)
 
 
